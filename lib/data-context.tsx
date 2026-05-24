@@ -9,6 +9,30 @@ import {
   type Account,
   type Budget,
 } from "./mock-data";
+import { type Transaction as MonzoTransaction } from "./types/transaction";
+
+// Monzo category slug → internal categoryId
+const MONZO_CATEGORY_MAP: Record<string, string> = {
+  eating_out:    "cat3",
+  groceries:     "cat1",
+  transport:     "cat2",
+  entertainment: "cat4",
+  bills:         "cat5",
+  shopping:      "cat4",
+  personal_care: "cat7",
+  health:        "cat7",
+  holidays:      "cat4",
+  income:        "cat8",
+  transfers:     "cat8",
+  savings:       "cat8",
+  finances:      "cat5",
+  cash:          "cat2",
+  general:       "cat3",
+};
+
+function guessIsRecurring(name: string): boolean {
+  return /netflix|spotify|disney|apple tv|amazon prime|youtube|headspace|audible|icloud|google one|gym|membership|patreon|dropbox|adobe|microsoft 365/i.test(name);
+}
 
 interface DataContextValue {
   transactions: Transaction[];
@@ -17,6 +41,7 @@ interface DataContextValue {
   setTransactions: (txns: Transaction[]) => void;
   setBudgets: (budgets: Budget[]) => void;
   importTransactions: (txns: Transaction[], account: Account) => void;
+  loadMonzoTransactions: (monzoTxns: MonzoTransaction[]) => void;
   hasImportedData: boolean;
   resetToMockData: () => void;
 }
@@ -41,6 +66,38 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setHasImportedData(true);
   }
 
+  function loadMonzoTransactions(monzoTxns: MonzoTransaction[]) {
+    const accountId = "monzo-current";
+
+    const converted: Transaction[] = monzoTxns
+      .filter((t) => t.amount !== 0)
+      .map((t, i) => ({
+        id: t.id || `monzo-${i}`,
+        accountId,
+        date: t.date,
+        merchant: t.name || t.description || "Unknown",
+        amount: Math.abs(t.amount),
+        type: t.amount < 0 ? "debit" : "credit",
+        categoryId: MONZO_CATEGORY_MAP[t.category?.toLowerCase()] ?? "cat3",
+        isRecurring: guessIsRecurring(t.name || t.description || ""),
+      }));
+
+    const balance = monzoTxns.reduce((s, t) => s + t.amount, 0);
+
+    const monzoAccount: Account = {
+      id: accountId,
+      name: "Monzo Current Account",
+      institution: "Monzo",
+      type: "checking",
+      balance,
+      currency: monzoTxns[0]?.currency || "GBP",
+    };
+
+    setAccounts([monzoAccount]);
+    setTransactions(converted);
+    setHasImportedData(true);
+  }
+
   function resetToMockData() {
     setTransactions(initialTransactions);
     setAccounts(initialAccounts);
@@ -50,7 +107,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   return (
     <DataContext.Provider
-      value={{ transactions, accounts, budgets, setTransactions, setBudgets, importTransactions, hasImportedData, resetToMockData }}
+      value={{
+        transactions,
+        accounts,
+        budgets,
+        setTransactions,
+        setBudgets,
+        importTransactions,
+        loadMonzoTransactions,
+        hasImportedData,
+        resetToMockData,
+      }}
     >
       {children}
     </DataContext.Provider>

@@ -1,13 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { Upload } from "lucide-react";
+import { Upload, RotateCcw } from "lucide-react";
 import CSVUpload from "@/components/transactions/CSVUpload";
 import TransactionTable from "@/components/transactions/TransactionTable";
 import { type Transaction } from "@/lib/types/transaction";
+import { useData } from "@/lib/data-context";
 
 export default function TransactionsPage() {
+  const { loadMonzoTransactions, resetToMockData, hasImportedData } = useData();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+  function handleTransactionsLoaded(txns: Transaction[]) {
+    setTransactions(txns);
+    loadMonzoTransactions(txns);
+  }
+
+  function handleReset() {
+    setTransactions([]);
+    resetToMockData();
+  }
 
   return (
     <div className="space-y-6">
@@ -22,13 +34,22 @@ export default function TransactionsPage() {
         </div>
 
         {transactions.length > 0 && (
-          <button
-            onClick={() => setTransactions([])}
-            className="flex items-center gap-2 rounded-xl bg-[#753991] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#753991]/90"
-          >
-            <Upload size={15} />
-            Upload new statement
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleReset}
+              className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-sm text-[#888888] transition-colors hover:border-red-300 hover:text-red-500"
+            >
+              <RotateCcw size={14} />
+              Reset
+            </button>
+            <button
+              onClick={() => { setTransactions([]); }}
+              className="flex items-center gap-2 rounded-xl bg-[#753991] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#753991]/90"
+            >
+              <Upload size={15} />
+              Upload new statement
+            </button>
+          </div>
         )}
       </div>
 
@@ -39,9 +60,18 @@ export default function TransactionsPage() {
             <p className="mt-1 text-lg font-semibold">Import your Monzo statement</p>
             <p className="mt-1 text-sm text-white/60">
               Export a CSV from the Monzo app under Account &rarr; Export transactions, then drop it below.
+              All pages — Dashboard, Budgets, Analytics — will update with your real figures.
             </p>
+            {hasImportedData && (
+              <button
+                onClick={handleReset}
+                className="mt-3 text-xs text-white/50 underline underline-offset-2 hover:text-white/80 transition-colors"
+              >
+                Revert to sample data
+              </button>
+            )}
           </div>
-          <CSVUpload onTransactionsLoaded={setTransactions} />
+          <CSVUpload onTransactionsLoaded={handleTransactionsLoaded} />
         </div>
       ) : (
         <TransactionTable transactions={transactions} />

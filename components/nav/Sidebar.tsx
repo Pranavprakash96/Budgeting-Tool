@@ -9,7 +9,10 @@ import {
   PieChart,
   Target,
   RefreshCw,
+  CircleCheck,
+  CircleDashed,
 } from "lucide-react";
+import { useData } from "@/lib/data-context";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -22,6 +25,7 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { hasImportedData } = useData();
 
   return (
     <>
@@ -50,8 +54,18 @@ export default function Sidebar() {
             );
           })}
         </nav>
-        <div className="px-6 py-4 border-t border-white/10">
-          <p className="text-xs text-white/40">Mock data only</p>
+        <div className="px-6 py-4 border-t border-white/10 flex items-center gap-2">
+          {hasImportedData ? (
+            <>
+              <CircleCheck size={13} className="text-green-400 flex-shrink-0" />
+              <p className="text-xs text-green-400">Real data loaded</p>
+            </>
+          ) : (
+            <>
+              <CircleDashed size={13} className="text-white/30 flex-shrink-0" />
+              <p className="text-xs text-white/30">Sample data</p>
+            </>
+          )}
         </div>
       </aside>
 
