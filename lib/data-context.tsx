@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import {
   transactions as initialTransactions,
   accounts as initialAccounts,
@@ -46,13 +46,46 @@ interface DataContextValue {
   resetToMockData: () => void;
 }
 
+const STORAGE_KEYS = {
+  transactions: "budgetapp_transactions",
+  accounts:     "budgetapp_accounts",
+  hasImported:  "budgetapp_hasImported",
+} as const;
+
+function readStorage<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 const DataContext = createContext<DataContextValue | null>(null);
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
-  const [accounts, setAccounts] = useState<Account[]>(initialAccounts);
+  const [transactions, setTransactions] = useState<Transaction[]>(() =>
+    readStorage(STORAGE_KEYS.transactions, initialTransactions),
+  );
+  const [accounts, setAccounts] = useState<Account[]>(() =>
+    readStorage(STORAGE_KEYS.accounts, initialAccounts),
+  );
   const [budgets, setBudgets] = useState<Budget[]>(initialBudgets);
-  const [hasImportedData, setHasImportedData] = useState(false);
+  const [hasImportedData, setHasImportedData] = useState<boolean>(() =>
+    readStorage(STORAGE_KEYS.hasImported, false),
+  );
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.transactions, JSON.stringify(transactions));
+  }, [transactions]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.accounts, JSON.stringify(accounts));
+  }, [accounts]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.hasImported, JSON.stringify(hasImportedData));
+  }, [hasImportedData]);
 
   function importTransactions(newTxns: Transaction[], account: Account) {
     setAccounts((prev) => {
@@ -99,6 +132,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }
 
   function resetToMockData() {
+    localStorage.removeItem(STORAGE_KEYS.transactions);
+    localStorage.removeItem(STORAGE_KEYS.accounts);
+    localStorage.removeItem(STORAGE_KEYS.hasImported);
     setTransactions(initialTransactions);
     setAccounts(initialAccounts);
     setBudgets(initialBudgets);
