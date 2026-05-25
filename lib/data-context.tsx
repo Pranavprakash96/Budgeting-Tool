@@ -64,17 +64,24 @@ function readStorage<T>(key: string, fallback: T): T {
 const DataContext = createContext<DataContextValue | null>(null);
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [transactions, setTransactions] = useState<Transaction[]>(() =>
-    readStorage(STORAGE_KEYS.transactions, initialTransactions),
-  );
-  const [accounts, setAccounts] = useState<Account[]>(() =>
-    readStorage(STORAGE_KEYS.accounts, initialAccounts),
-  );
+  const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
+  const [accounts, setAccounts] = useState<Account[]>(initialAccounts);
   const [budgets, setBudgets] = useState<Budget[]>(initialBudgets);
-  const [hasImportedData, setHasImportedData] = useState<boolean>(() =>
-    readStorage(STORAGE_KEYS.hasImported, false),
-  );
+  const [hasImportedData, setHasImportedData] = useState<boolean>(false);
 
+  // Hydrate from localStorage after mount (avoids SSR/hydration mismatch)
+  useEffect(() => {
+    const storedTxns = readStorage<Transaction[]>(STORAGE_KEYS.transactions, []);
+    if (storedTxns.length > 0) setTransactions(storedTxns);
+
+    const storedAccounts = readStorage<Account[]>(STORAGE_KEYS.accounts, []);
+    if (storedAccounts.length > 0) setAccounts(storedAccounts);
+
+    const storedHasImported = readStorage<boolean>(STORAGE_KEYS.hasImported, false);
+    if (storedHasImported) setHasImportedData(true);
+  }, []);
+
+  // Persist state changes to localStorage
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.transactions, JSON.stringify(transactions));
   }, [transactions]);
